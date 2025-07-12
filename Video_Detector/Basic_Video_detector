@@ -1,0 +1,78 @@
+import cv2
+from ultralytics import YOLO
+from aircraft_classifier import classify_aircraft
+
+model = YOLO("C:/Users/ASAF/Desktop/project_codes/project/uses_modles/v8m_10epoch.pt")
+names = model.names
+
+# Sınıf istatistiklerini tut
+class_counts = {}
+class_scores = {}
+
+def process_frame(frame):
+    results = model(frame)
+    for result in results:
+        for box in result.boxes.data:
+            x1, y1, x2, y2, score, cls_id = box.tolist()
+            x1, y1, x2, y2 = map(int, [x1, y1, x2, y2])
+            cls_name = names[int(cls_id)]
+
+            class_counts[cls_name] = class_counts.get(cls_name, 0) + 1
+            class_scores.setdefault(cls_name, []).append(score)
+
+            # Kutu çiz
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            cv2.putText(frame, f"{cls_name} ({score:.2f})", (x1, y1 - 10),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+
+            if cls_name == "plane":
+                crop = frame[y1:y2, x1:x2]
+                aircraft_type = classify_aircraft(crop)
+                cv2.putText(frame, f"{aircraft_type}", (x1, y2 + 20),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
+    return frame
+
+def resize_frame(frame, width=480):
+    h, w = frame.shape[:2]
+    ratio = width / w
+    height = int(h * ratio)
+    return cv2.resize(frame, (width, height))
+
+def detect_from_video(video_path):
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        print("[!] Video açılamadı.")
+        return
+
+    print("[*] Video başlatıldı. Kapatmak için pencereyi kapatın ya da 'q' tuşuna basın.")
+
+    window_name = "📹 Video Tespiti"
+    cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        annotated = process_frame(frame)
+        resized = resize_frame(annotated, width=480)
+        cv2.imshow(window_name, resized)
+
+        # Çıkış tuşu veya pencere kapatıldı mı kontrol et
+        if cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE) < 1:
+            break
+        if cv2.waitKey(1) & 0xFF == ord("q"):
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
+
+    # Özet
+    print("\n📊 Video Analiz Özeti:")
+    if not class_counts:
+        print("Nesne bulunamadı.")
+    else:
+        for cls, count in class_counts.items():
+            scores = class_scores.get(cls, [])
+            avg_score = sum(scores) / len(scores) if scores else 0
+            print(f"🔹 {cls}: {count} adet | Ortalama Skor: {avg_score:.2f}")
