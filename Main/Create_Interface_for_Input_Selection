@@ -1,0 +1,51 @@
+# main.py
+
+import tkinter as tk
+from tkinter import filedialog, messagebox
+from image_detector import detect_from_image
+from video_detector import detect_from_video
+
+def sec_resim():
+    path = filedialog.askopenfilename(
+        title="🖼️ Resim Dosyası Seç",
+        filetypes=[("Resim Dosyaları", "*.jpg *.jpeg *.png")]
+    )
+    if path:
+        try:
+            detect_from_image(path)
+        except Exception as e:
+            messagebox.showerror("Hata", f"Resim tespiti başarısız:\n{str(e)}")
+
+def sec_video():
+    path = filedialog.askopenfilename(
+        title="🎥 Video Dosyası Seç",
+        filetypes=[("Video Dosyaları", "*.mp4 *.avi *.mov")]
+    )
+    if path:
+        try:
+            detect_from_video(path)
+        except Exception as e:
+            messagebox.showerror("Hata", f"Video tespiti başarısız:\n{str(e)}")
+
+def cikis():
+    root.destroy()
+
+# Arayüz Başlangıç
+root = tk.Tk()
+root.title("Hava Araçları Tespit Sistemi")
+root.geometry("400x300")
+root.configure(bg="#1e1e1e")
+
+label = tk.Label(root, text="Hava Araçları Tespit ve Sınıflandırma", font=("Helvetica", 16, "bold"), fg="white", bg="#1e1e1e")
+label.pack(pady=30)
+
+btn_resim = tk.Button(root, text="🖼️ Resim ile Tespit", command=sec_resim, width=25, height=2, bg="#2d89ef", fg="white")
+btn_resim.pack(pady=10)
+
+btn_video = tk.Button(root, text="🎥 Video ile Tespit", command=sec_video, width=25, height=2, bg="#2d89ef", fg="white")
+btn_video.pack(pady=10)
+
+btn_exit = tk.Button(root, text="🚪 Çıkış", command=cikis, width=25, height=2, bg="#e81123", fg="white")
+btn_exit.pack(pady=20)
+
+root.mainloop()
